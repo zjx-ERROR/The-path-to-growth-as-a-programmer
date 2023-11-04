@@ -1,0 +1,53 @@
+baseURL = 'https://zjx-ERROR.github.io/'
+languageCode = 'zh-CN'
+theme = "JuiceBar"
+title = "Turtle Titan"
+
+[params]
+author = "张家熙"
+description = "个人博客"
+authorImage = "/images/2.png"
+paginate = 3
+
+Title = "Turtle Titan"
+content = "我是张家熙，很高兴来到我的个人博客🤭"
+imageUrl = "/images/1.jpeg"
+
+# To add a new social icon (More social icons can be found in JuiceBar\layouts\partials\svg.html.)
+[[params.social]]
+name = "Github"
+url = "https://github.com/zjx-ERROR"
+
+
+[taxonomies]
+category = "categories"
+
+# To add a new navigation link
+#[[menu.main]]
+#name = "About"
+#url = "/about"
+[[menu.main]]
+name = "Blog"
+url = "/post"
+[[menu.main]]
+name = "Categories"
+url = "/categories"
+
+[params.giscus]
+repo = "zjx-ERROR/zjx-ERROR.github.io"
+repoID = "R_kgDOKmiqlg"
+category = "Announcements"
+categoryID = "DIC_kwDOKmiqls4CarY3"
+mapping = "og:title"
+reactionsEnabled = "1"
+emitMetadata = "0"
+inputPosition = "bottom"
+lang = "zh-CN"
+loading = "lazy"
+
+# Used for outputting the documentation (required).
+[outputs]
+home = ["HTML", "RSS", "JSON"]
+
+
+
