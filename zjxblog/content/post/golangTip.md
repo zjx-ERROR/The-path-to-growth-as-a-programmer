@@ -1,5 +1,5 @@
 ---
-title: "Golang技巧"
+title: "Golang进阶技巧"
 date: 2023-11-01T00:35:31+08:00
 categories: [Golang]
 draft: false
@@ -441,4 +441,212 @@ func main() {
 
 向map添加更多元素会使map的哈希表增长，从而对整个哈希表进行重新排序。最后五行打印不再具有任何明显的顺序。
 
+## 6. map是一个指针
 
+***在Go中map关键字是\*runtime.hmap的别名***
+
+由于map是一个指针，因此将其作为函数入参，指向的是同一个map数据结构。
+
+```golang
+package main
+
+import "fmt"
+
+func f1(m map[int]int) {
+    m[5] = 123 
+}
+
+func main() {
+    m := make(map[int]int)
+    f1(m)
+    fmt.Println(m[5]) // prints 123
+}
+
+```
+
+## 7. struct{}类型
+
+Go没有类似c++的std:set类型。但是可以通过struct{}作为map的值代替set类型。
+
+```golang
+package main
+
+import (
+    "fmt"
+)
+
+func main() {
+    m := make(map[int]struct{})
+    m[123] = struct{}{}
+    _, key := m[123]
+    fmt.Println(key)
+}
+
+```
+
+可能你会想到用bool类型作为map的值也未尝不可，但是实际上struct{}类型占用内存大小为零字节。
+
+```golang
+package main
+
+import (
+    "fmt"
+    "unsafe"
+)
+
+func main() {
+    fmt.Println(unsafe.Sizeof(false)) // 1
+    fmt.Println(unsafe.Sizeof(struct{}{})) // 0
+}
+
+```
+
+## 8. map的容量
+
+map是一个相当复杂的数据结构。
+
+虽然可以可以在创建时指定其初始容量，但在以后时无法获取其容量的，至少无法通过cap获取。
+
+```golang
+package main
+
+import (
+    "fmt"
+)
+
+func main() {
+    m := make(map[int]bool, 5) // 初始化容量为5
+    fmt.Println(len(m))        // len没问题
+    fmt.Println(cap(m))        // 编译器错误，invalid argument m (type map[int]bool) for cap
+}
+
+```
+
+## 9. map值无法寻址
+
+Go的map是通过哈希表实现的，哈希表需要在map增长或缩小时移动元素的，因此Go不允许获取map元素的地址。
+
+```golang
+
+package main
+
+import "fmt"
+
+type item struct {
+    value string
+}
+
+func main() {
+    m := map[int]item{1: {"one"}}
+
+    fmt.Println(m[1].value) 
+    addr := &m[1]           // error: cannot take the address of m[1]
+    m[1].value = "two"      // error: can't assign to struct field m[1].value in map
+}
+
+```
+
+## 10. map并发安全问题
+
+***常规的map不是并发安全的***
+
+```golang
+
+package main
+
+import (
+    "math/rand"
+    "time"
+)
+
+func readWrite(m map[int]int) {
+    for i := 0; i < 100; i++ {
+        k := rand.Int()
+        m[k] = m[k] + 1
+    }
+}
+
+func main() {
+    m := make(map[int]int)
+
+    for i := 0; i < 10; i++ {
+        go readWrite(m)
+    }
+
+    select{}
+}
+
+```
+
+> fatal error: concurrent map read and map write
+> 
+> fatal error: concurrent map writes
+> 
+> ...
+
+
+sync包中有一个特殊的map，可以安全地供多个Goroutine并发读写。
+
+不过Go官方文档建议在大多数情况下使用带锁的常规map或协调控制，sync.Map不是类型安全的，它类似于map[interface{}]interface{}。
+
+> The Map type is optimized for two common use cases: (1) when the entry for a given key is only ever written once but read many times, as in caches that only grow, or (2) when multiple goroutines read, write, and overwrite entries for disjoint sets of keys. In these two cases, use of a Map may significantly reduce lock contention compared to a Go map paired with a separate Mutex or RWMutex.
+> --- https://github.com/golang/go/blob/master/src/sync/map.go
+
+即
+- 当给定键只被写入一次但被多次读取时，例如在仅会增长的缓存中。
+- 当多个Gouroutine读取、写入和覆盖不同键的条目时。
+
+
+## 11. Go字符串都是UTF-8？
+
+***编译器或Go字符串处理代码与最终编码为UTF-8的字符串没有任何关系***
+
+造成这种混乱的原因之一就是字符串的字面量。虽然字符串本身没有任何特定的编码，但Go编译器始终将源代码解释为UTF-8。
+
+定义字符串字面量之后，文本编辑器会将其于代码的其余部分一样保存为UTF-8编码的Unicode字符串。这就是Go解析后将编译到程序中的内容。
+
+下面例子，定义了非UTF-8字符串，为了证明这一点：
+
+```golang
+
+package main
+
+import (
+    "fmt"
+    "unicode/utf8"
+)
+
+func main() {
+    s := "\xc1\x2b\xa3"
+
+	fmt.Println(utf8.ValidString(s)) // false
+
+	fmt.Println(s) // �+�
+}
+
+```
+
+## 12. iota从零编号？
+
+iota在Go中以常量编号开始，但并不像某些人想象的那样从零开始，二十从当前const块中常量的索引开始：
+
+```golang
+
+const (
+    myconst = "c"
+    myconst2 = "c2"
+    two = iota // 2
+)
+
+```
+
+在当前const块中使用iota两次不会重置编号
+
+```golang
+const (
+    zero = iota // 0
+    one // 1
+    two = iota // 2
+)
+
+```
