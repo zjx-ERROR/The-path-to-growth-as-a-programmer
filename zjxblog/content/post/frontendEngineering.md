@@ -436,3 +436,6 @@ HTTP/2中的Server Push允许服务器在客户端尚未请求某资源时，主
     7. 开启合成层
         - 对需要频繁动画的元素，如：will-change: transform 或 translateZ(0)，提示浏览器提前创建合成层，减少主线程开销
   
+# 前端工程化
+
+## 
